@@ -1,3 +1,7 @@
+/**
+ * Gets the order id from the url
+ * @returns the order id
+ */
 function getOrderId() {
     let url = new URL(window.location.href);
 
@@ -12,4 +16,3 @@ function getOrderId() {
 document
     .getElementById("orderId")
     .innerText = getOrderId();
-    

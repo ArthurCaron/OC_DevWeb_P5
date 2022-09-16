@@ -1,8 +1,17 @@
+/**
+ * Gets the product from DB with the given id
+ * @param { String } id 
+ * @returns the product which has the id provided
+ */
 async function getProduct(id) {
     return fetch(`http://localhost:3000/api/products/${id}`)
         .then(it => it.json());
 }
 
+/**
+ * Gets the cart from localstorage or a new one if none exists
+ * @returns the current cart
+ */
 function getCart() {
     let cart = localStorage.getItem("cart");
     if (cart == null) {
@@ -11,6 +20,13 @@ function getCart() {
     return JSON.parse(cart);
 }
 
+/**
+ * Finds the product in the cart if it exists or null if it doesn't
+ * @param { Object } cart 
+ * @param { String } productId 
+ * @param { String } productColor 
+ * @returns the product if found or null if not found
+ */
 function getProductInCart(cart, productId, productColor) {
     for (let product of cart) {
         if (product.id === productId && product.color === productColor) {
@@ -20,10 +36,20 @@ function getProductInCart(cart, productId, productColor) {
     return null;
 }
 
+/**
+ * Saves the new version of the cart in the local storage
+ * @param { Object } cart 
+ */
 function saveCart(cart) {
     localStorage.setItem("cart", JSON.stringify(cart));
 }
 
+/**
+ * Updates the quantity for a product in the cart
+ * @param { String } productId 
+ * @param { String } productColor 
+ * @param { Number } productQuantity 
+ */
 function updateCart(productId, productColor, productQuantity) {
     let cart = getCart();
 
@@ -35,6 +61,11 @@ function updateCart(productId, productColor, productQuantity) {
     saveCart(cart);
 }
 
+/**
+ * Deletes a product from the cart
+ * @param { String } productId 
+ * @param { String } productColor 
+ */
 function deleteFromCart(productId, productColor) {
     let cart = getCart();
 
@@ -47,6 +78,19 @@ function deleteFromCart(productId, productColor) {
     saveCart(cart);
 }
 
+/**
+ * Deletes the current cart
+ */
+function emptyCart() {
+    localStorage.removeItem("cart");
+}
+
+/**
+ * Creates an article element
+ * @param { String } productId 
+ * @param { String } productColor 
+ * @returns an article element
+ */
 function createArticle(productId, productColor) {
     let article = document.createElement("article");
     article.classList.add("cart__item");
@@ -55,6 +99,12 @@ function createArticle(productId, productColor) {
     return article;
 }
 
+/**
+ * Creates an image element
+ * @param { String } imageSource 
+ * @param { String } imageDescription 
+ * @returns an image element
+ */
 function createImage(imageSource, imageDescription) {
     let div = document.createElement("div");
     div.classList.add("cart__item__img");
@@ -67,12 +117,23 @@ function createImage(imageSource, imageDescription) {
     return div;
 }
 
+/**
+ * Creates a content element
+ * @returns a content element
+ */
 function createContent() {
     let content = document.createElement("div");
     content.classList.add("cart__item__content");
     return content;
 }
 
+/**
+ * Creates a description element
+ * @param { String } productName 
+ * @param { String } productColor 
+ * @param { Number } productPrice 
+ * @returns a description element
+ */
 function createDescription(productName, productColor, productPrice) {
     let description = document.createElement("div");
     description.classList.add("cart__item__content__description");
@@ -91,6 +152,13 @@ function createDescription(productName, productColor, productPrice) {
     return description;
 }
 
+/**
+ * Creates a settings element
+ * @param { String } productId 
+ * @param { String } productColor 
+ * @param { Number } productQuantity 
+ * @returns a settings element
+ */
 function createSettings(productId, productColor, productQuantity) {
     let settings = document.createElement("div");
     settings.classList.add("cart__item__content__settings");
@@ -134,6 +202,12 @@ function createSettings(productId, productColor, productQuantity) {
     return settings;
 }
 
+/**
+ * Creates a cart item in the page
+ * @param { String } productId 
+ * @param { Number } productQuantity 
+ * @param { String } productColor 
+ */
 async function fillCartItem(productId, productQuantity, productColor) {
     let product = await getProduct(productId);
     let article = createArticle(productId, productColor);
@@ -149,6 +223,9 @@ async function fillCartItem(productId, productQuantity, productColor) {
         .appendChild(article);
 }
 
+/**
+ * Update the total below the cart items
+ */
 async function updateTotal() {
     let cart = getCart();
     let totalQuantity = 0;
@@ -169,6 +246,9 @@ async function updateTotal() {
         .innerText = totalPrice;
 }
 
+/**
+ * Creates all of the car items in the page
+ */
 async function fillCartItems() {
     let cart = getCart();
     
@@ -179,7 +259,11 @@ async function fillCartItems() {
     updateTotal();
 }
 
-function getOrder() {
+/**
+ * Creates an order from the information in the cart and in the form
+ * @returns an order
+ */
+function createOrder() {
     let products = new Set();
     for (let product of getCart()) {
         products.add(product.id);
@@ -196,6 +280,10 @@ function getOrder() {
     };
 }
 
+/**
+ * Calls the order api
+ * @returns the order call result
+ */
 async function order() {
     return fetch("http://localhost:3000/api/products/order", {
         method: "POST",
@@ -203,27 +291,77 @@ async function order() {
             'Accept': 'application/json', 
             'Content-Type': 'application/json' 
             },
-        body: JSON.stringify(getOrder())
+        body: JSON.stringify(createOrder())
     })
     .then(it => it.json());
 }
 
+/**
+ * Sends an order with the information from the cart and from the form, and redirects to the the confirmation page
+ */
 async function sendOrder() {
-    let result = await order();
-    window.location.href = `confirmation.html?order_id=${result.orderId}`;
+    if (
+        validateName(document.getElementById("firstName").value)
+        && validateName(document.getElementById("lastName").value)
+        && validateAddress(document.getElementById("address").value)
+        && validateCity(document.getElementById("city").value)
+        && validateEmail(document.getElementById("email").value)
+    ) {
+        let result = await order();
+        window.location.href = `confirmation.html?order_id=${result.orderId}`;
+        emptyCart();
+    }
+}
+
+/**
+ * Validates the firstName and lastName fields
+ * @param { String } value 
+ * @returns true if the value matches a firstName or lastName
+ */
+function validateName(value) {
+    let nameReg = new RegExp("^[a-zA-Z]+$");
+    return nameReg.test(value);
+}
+
+/**
+ * Validates the address field
+ * @param { String } value 
+ * @returns true if the value matches an address
+ */
+function validateAddress(value) {
+    if (value) {
+        return true;
+    } 
+    return false;
+}
+
+/**
+ * Validates the city field
+ * @param { String } value 
+ * @returns true if the value matches a city
+ */
+function validateCity(value) {
+    let cityReg = new RegExp("^([a-zA-Z\u0080-\u024F]+(?:. |-| |'))*[a-zA-Z\u0080-\u024F]*$");
+    return cityReg.test(value)
+}
+
+/**
+ * Validates the email field
+ * @param { String } value 
+ * @returns true if the value matches an email
+ */
+function validateEmail(value) {
+    let emailReg = new RegExp("^(.+)@(.+){2,}\.(.+){2,}$");
+    return emailReg.test(value);
 }
 
 fillCartItems();
-
-const nameReg = new RegExp("^[a-zA-Z]+$");
-const cityReg = new RegExp("^([a-zA-Z\u0080-\u024F]+(?:. |-| |'))*[a-zA-Z\u0080-\u024F]*$");
-const emailReg = new RegExp("^(.+)@(.+){2,}\.(.+){2,}$");
 
 document
     .getElementById("firstName")
     .addEventListener("input", (ev) => {
         let errorMsg = document.getElementById("firstNameErrorMsg");
-        if (nameReg.test(ev.target.value)) {
+        if (validateName(ev.target.value)) {
             errorMsg.innerText = "";
         } else {
             errorMsg.innerText = "Mauvais format pour le prénom";
@@ -234,7 +372,7 @@ document
     .getElementById("lastName")
     .addEventListener("input", (ev) => {
         let errorMsg = document.getElementById("lastNameErrorMsg");
-        if (nameReg.test(ev.target.value)) {
+        if (validateName(ev.target.value)) {
             errorMsg.innerText = "";
         } else {
             errorMsg.innerText = "Mauvais format pour le nom";
@@ -242,10 +380,21 @@ document
     });
 
 document
+    .getElementById("address")
+    .addEventListener("input", (ev) => {
+        let errorMsg = document.getElementById("addressErrorMsg");
+        if (validateAddress(ev.target.value)) {
+            errorMsg.innerText = "";
+        } else {
+            errorMsg.innerText = "Mauvais format pour l'adresse";
+        }
+    });
+
+document
     .getElementById("city")
     .addEventListener("input", (ev) => {
         let errorMsg = document.getElementById("cityErrorMsg");
-        if (cityReg.test(ev.target.value)) {
+        if (validateCity(ev.target.value)) {
             errorMsg.innerText = "";
         } else {
             errorMsg.innerText = "Mauvais format pour la ville";
@@ -256,7 +405,7 @@ document
     .getElementById("email")
     .addEventListener("input", (ev) => {
         let errorMsg = document.getElementById("emailErrorMsg");
-        if (emailReg.test(ev.target.value)) {
+        if (validateEmail(ev.target.value)) {
             errorMsg.innerText = "";
         } else {
             errorMsg.innerText = "Mauvais format pour l'adresse email";
